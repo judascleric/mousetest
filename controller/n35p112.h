@@ -9,7 +9,7 @@
 
 uint8_t n35p112_init(void);
 void n35p112_calibrate(void);
-uint8_t n35p112_update(void);
+uint8_t n35p112_update(uint8_t elapsedMs);
 uint8_t n35p112_get_x(void);
 uint8_t n35p112_get_y(void);
 
