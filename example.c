@@ -38,6 +38,8 @@
 int main(void)
 {
 	int8_t x, y;
+	uint8_t mouseBtn, prevMouseBtn;
+	uint8_t thisFrameMs, prevFrameMs, elapsedMs;
 
 	teensy_init();
 
@@ -51,8 +53,8 @@ int main(void)
 	// and do whatever it does to actually be ready for input
 	_delay_ms(3000);
 
-	print("USB Initialized.\n");
-	_delay_ms(1000);
+	//print("USB Initialized.\n");
+	//_delay_ms(1000);
 
 	n35p112_init();
 
@@ -60,40 +62,55 @@ int main(void)
 	//TWCR = 69(0x45)
 	//TWSR = 248(0xF8)
 	//TWBR = 72(0x48)
-	print("TWCR = ");
-	phex(TWCR);
-	print(" (45 expected)\n");
-	print("TWSR = ");
-	phex(TWSR);
-	print(" (F8 expected)\n");
-	print("TWBR = ");
-	phex(TWBR);
-	print(" (48 expected)\n");
+	//print("TWCR = ");
+	//phex(TWCR);
+	//print(" (45 expected)\n");
+	//print("TWSR = ");
+	//phex(TWSR);
+	//print(" (F8 expected)\n");
+	//print("TWBR = ");
+	//phex(TWBR);
+	//print(" (48 expected)\n");
 
 	//print("teensy_configure_interrupts().\n");
-	_delay_ms(100);
+	//_delay_ms(100);
 	teensy_configure_interrupts();
 
-	print("n35p112_calibrate().\n");
-	_delay_ms(100);
+	//print("n35p112_calibrate().\n");
+	//_delay_ms(100);
 	n35p112_calibrate();
 
 	print("Initialized.\n");
+	prevFrameMs = teensy_get_elapsed_ms();
+	prevMouseBtn = 0;
 	while (1) {
+		thisFrameMs = teensy_get_elapsed_ms();
+		elapsedMs = thisFrameMs - prevFrameMs;
+		if (thisFrameMs < prevFrameMs)
+			elapsedMs = 1; //eh, not accurate, but can't hurt
+		n35p112_update(elapsedMs);
 		x = n35p112_get_x();
 		y = n35p112_get_y();
-		//usb_mouse_move(x, y, 0);
-		print("mouse move: x=");
-		phex(x);
-		print(", y=");
-		phex(y);
-		print("\n");
-		_delay_ms(500);
-	}
+		mouseBtn = n35p112_get_btn();
+		usb_mouse_move(x, y, 0);
+		//usb_mouse_move(0, 0, 0);
+		if (mouseBtn != prevMouseBtn)
+		{
+			usb_mouse_buttons(mouseBtn, 0, 0);
+			//print("mouse click: ");
+			//phex(mouseBtn);
+			//print("\n");
+		}
+		prevFrameMs = thisFrameMs;
+		prevMouseBtn = mouseBtn;
+		_delay_ms(5);
 
-	// This sequence creates a right click
-	//usb_mouse_buttons(0, 0, 1);
-	//_delay_ms(10);
-	//usb_mouse_buttons(0, 0, 0);
+		//print("mouse move: x=");
+		//phex(x);
+		//print(", y=");
+		//phex(y);
+		//print("\n");
+		//_delay_ms(500);
+	}
 }
 

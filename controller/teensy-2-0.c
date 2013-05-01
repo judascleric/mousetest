@@ -24,9 +24,9 @@
 
 #define TWI_FREQ 400000UL
 
-// --- helpers
-#define  SET    |=
-#define  CLEAR  &=~
+// ----------------------------------------------------------------------------
+
+volatile static uint8_t sElapsedMs = 0;
 
 // ----------------------------------------------------------------------------
 
@@ -41,11 +41,15 @@ uint8_t teensy_init(void) {
 	CPU_PRESCALE(CPU_16MHz);
 
 	// PD2 as interrupt for N35P112
-	DDRD CLEAR (1 << 2); //Input
-	PORTD SET (1 << 2); //Use Pullup
+	DDRD &=~ (1 << 2); //Input
+	PORTD |= (1 << 2); //Use Pullup
 
 	// PD3 as reset for N35P112
-	DDRD SET (1 << 3); //Output
+	DDRD |= (1 << 3); //Output
+
+	// PB7 as pushbutton for N35P112
+	DDRB &=~ (1 << 7); //Input
+	PORTB &=~ (1 << 7); //No Pullup
 
 	// I2C (TWI)
 	uint8_t twiPrescaler = TWI_BIT_PRESCALE_1;
@@ -57,9 +61,32 @@ uint8_t teensy_init(void) {
 
 uint8_t teensy_configure_interrupts(void)
 {
+	cli();
+
 	// PD2 as interrupt for N35P112
-	EIFR SET (1 << INTF2);
-	EIMSK SET (1 << INT2);
+	EIFR |= (1 << INTF2);
+	EIMSK |= (1 << INT2);
+
+	// enable timer0 interrupt
+	TCCR0A = 0x00; // Normal Counter mode
+	TCCR0B |= (1 << CS01) | (1<<CS00); // Prescaler = 64: 64 * 1/16,000,000(F_CPU) = 0.000004 s = 4 us
+	TCNT0 = 6; // Preload timer count at 6, which will overflow in 250 cycles. 4us*250 = 1000us = 1ms
+	TIMSK0 |= 0x01; //Enable timer 0
+
+	sei();
+}
+
+uint8_t teensy_get_elapsed_ms(void)
+{
+	return sElapsedMs;
+}
+
+ISR(TIMER0_OVF_vect)
+{  
+	cli();
+
+	TCNT0=6;
+	++sElapsedMs;
 
 	sei();
 }
